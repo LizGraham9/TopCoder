@@ -49,72 +49,78 @@ Returns: 400000
 This problem statement is the exclusive and proprietary property of TopCoder, Inc. Any unauthorized use or reproduction of this information without the prior written consent of TopCoder, Inc. is strictly prohibited. (c)2003, TopCoder, Inc. All rights reserved.
 */
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
-//solution still a work in progress
 
 public class AlienAndHamburgers {
 
     public int getNumber(int[] type, int[] taste) {
-
-        List<burgerGroup> burgers = new ArrayList<>();
-
-        for (int i = 0; i < type.length; i++) {
-            for (burgerGroup burger : burgers) {
-                if (burger.type == type[i]) {
-                    continue;
-                }
-            }
-
-            List<Integer> tasteScores = new ArrayList<>();
-
-            for (int j = i; j < type.length; i++) {
-                if (type[j] == type[i]) {
-                    tasteScores.add(taste[j]);
-                }
-            }
-
-            burgers.add(new burgerGroup(type[i], tasteScores));
-        }
-
-        return 0;
+        List<TypeGroup> typeGroups = sortIntoTypeGroups(type, taste);
+        return findMaxJoy(typeGroups);
     }
 
+    private List<TypeGroup> sortIntoTypeGroups(int[] type, int[] taste) {
+        List<TypeGroup> typeGroups = new ArrayList<>();
+        for (int i = 0; i < type.length; i++) {  //iterate through type list
+            int j = i;
+            if (typeGroups.stream().noneMatch(x -> x.type == type[j])) {
+                List<Integer> tasteScores = new ArrayList<>(); //if the type hasn't been added yet, create a list of all of it's taste scores
+                for (int k = i; k < type.length; k++) { //run through type list (starts at i, rather than beginning) and look for other occurrences of same type. Add the corresponding taste score to that type's score list
+                    if (type[k] == type[i]) {
+                        tasteScores.add(taste[k]);
+                    }
+                }
+                typeGroups.add(new TypeGroup(type[i], tasteScores)); //add given type and its taste scores to list of type groups
+            }
+        }
+        return typeGroups;
+    }
 
-    private class burgerGroup {
+    private int findMaxJoy(List<TypeGroup> typeGroups) {
+        Collections.sort(typeGroups);  //puts groups in ascending order based on value
+        int maxJoy = 0;
+        for (int i = 0; i < typeGroups.size(); i++) {  //iterates through sorted groups to find max joy
+            int groupsRemaining = typeGroups.size() - i;
+            int sumOfRemainingTopScores = typeGroups.stream().skip(i).mapToInt(x -> x.value).sum();
+            int currentJoy = (groupsRemaining) * sumOfRemainingTopScores;
+            if (currentJoy > maxJoy) {
+                maxJoy = currentJoy;
+            }
+        }
+        return maxJoy;
+    }
+
+    private class TypeGroup implements Comparable<TypeGroup> {
         private int type;
-        private List<Integer> rawTasteScores;
-        private int sumOfTopScores;
+        private int value;
 
-        public burgerGroup(int type, List<Integer> rawTasteScores) {
+        public TypeGroup(int type, List<Integer> tasteScores) {
             this.type = type;
-            this.rawTasteScores = rawTasteScores;
-
-
+            this.value = sumTopScores(tasteScores);
         }
 
-        private int cullTasteScores(List<Integer> tastes) {
-            tastes.sort(Comparator.reverseOrder());
-            int highestTaste = tastes.get(0);
+        private int sumTopScores(List<Integer> tasteScores) {
+            tasteScores.sort(Comparator.reverseOrder());
+            int sumOfTopScores = tasteScores.get(0);  //adds highest value to sum. this value could be negative.
 
-            for (int i : tastes) {
-
+            for (int i = 1; i < tasteScores.size(); i++) { //runs through rest of reverse-sorted list and adds positive values (if any are present)
+                if (tasteScores.get(i) > 0) {
+                    sumOfTopScores += tasteScores.get(i);
+                } else {
+                    break;
+                }
             }
-
-            if (highestTaste < 0) {
-                tastes.removeIf(x -> x <= highestTaste);
-            } else {
-                tastes.removeIf(x -> x < 0);
-            }
-
-            return 0;
-
+            return sumOfTopScores;
         }
 
-//         burgersfdff.values().forEach(x -> cullTasteScores(x));
+        @Override
+        public int compareTo(TypeGroup group) {
+            return this.value - group.value;
+        }
 
-
+        @Override
+        public String toString() {
+            return "type group: " + type + " | top scores: " + value;
+        }
     }
 }
